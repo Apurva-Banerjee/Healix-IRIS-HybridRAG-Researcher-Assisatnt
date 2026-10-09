@@ -23,8 +23,6 @@ storage/*
 *.sqlite3
 
 # Raw and downloaded / processed data
-data/raw/pdf/*
-!data/raw/pdf/.gitkeep
 data/raw/metadata/*
 !data/raw/metadata/.gitkeep
 data/processed/text/*
