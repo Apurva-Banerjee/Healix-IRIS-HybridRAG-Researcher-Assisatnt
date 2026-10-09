@@ -1,0 +1,47 @@
+# Environment variables
+.env
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Python cache & build
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+.dist/
+build/
+
+# Project storage & databases
+storage/*
+!storage/.gitkeep
+*.db
+*.sqlite
+*.sqlite3
+
+# Raw and downloaded / processed data
+data/raw/pdf/*
+!data/raw/pdf/.gitkeep
+data/raw/metadata/*
+!data/raw/metadata/.gitkeep
+data/processed/text/*
+!data/processed/text/.gitkeep
+data/processed/json/*
+!data/processed/json/.gitkeep
+data/processed/chunks/*
+!data/processed/chunks/.gitkeep
+data/evaluation/*
+!data/evaluation/.gitkeep
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
