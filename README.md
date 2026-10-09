@@ -227,3 +227,5 @@ pytest -v tests
 python scripts/evaluate.py --k 3
 ```
 Measures ranking and retrieval quality across `Precision@K`, `Recall@K`, `MRR` (Mean Reciprocal Rank), and `nDCG@K`.
+
+<!--  .\.venv\Scripts\streamlit.exe run ui/app.py -->

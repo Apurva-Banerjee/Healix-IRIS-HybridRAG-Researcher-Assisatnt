@@ -1,5 +1,9 @@
 import sys
+import logging
 from pathlib import Path
+
+# Silence harmless Streamlit watcher warnings for lazy-loaded transformer modules
+logging.getLogger("streamlit.watcher.local_sources_watcher").setLevel(logging.ERROR)
 
 # Add project root to sys.path so imports work seamlessly
 root_dir = Path(__file__).resolve().parent.parent
@@ -63,7 +67,7 @@ with st.sidebar:
     download_pdfs = st.checkbox("Download Open-Access PDFs", value=True)
     max_pdfs = st.slider("Max PDF Downloads", min_value=1, max_value=15, value=5)
 
-    if st.button("🚀 Run Ingestion Pipeline", use_container_width=True):
+    if st.button(" Run Ingestion Pipeline", use_container_width=True):
         with st.spinner(f"Ingesting papers from arXiv and OpenAlex for '{ingest_query}'..."):
             summary = ingest_pipe.run(
                 query=ingest_query,
@@ -75,7 +79,7 @@ with st.sidebar:
             st.rerun()
 
 # Main Interface Tabs
-tab_qa, tab_search, tab_library = st.tabs(["🧠 Grounded Research Q&A", "🔍 Evidence Retrieval", "📚 Paper Corpus"])
+tab_qa, tab_search, tab_library = st.tabs([" Grounded Research Q&A", " Evidence Retrieval", " Paper Corpus"])
 
 with tab_qa:
     st.subheader("Ask a Scientific Question")
@@ -91,7 +95,7 @@ with tab_qa:
     retrieval_mode = col_m.selectbox("Retrieval Method", ["Hybrid (Dense + BM25)", "Semantic Vector (Qdrant)", "Keyword (BM25)"])
     top_k_val = col_k.slider("Evidence Chunks (Top-K)", min_value=1, max_value=10, value=5)
 
-    if st.button("✨ Synthesize Answer", type="primary", use_container_width=True):
+    if st.button(" Synthesize Answer", type="primary", use_container_width=True):
         with st.spinner("Retrieving evidence passages and synthesizing answer..."):
             if "Hybrid" in retrieval_mode:
                 retrieved = hyb_engine.search(query_input, top_k=top_k_val)
@@ -102,18 +106,18 @@ with tab_qa:
 
             res = ans_gen.generate_answer(query=query_input, retrieved_chunks=retrieved)
 
-            st.markdown("### 📝 Synthesized Research Answer")
+            st.markdown("###  Synthesized Research Answer")
             st.markdown(res["answer"])
 
             st.divider()
-            st.markdown("### 📚 Supporting Paper Citations")
+            st.markdown("###  Supporting Paper Citations")
             if res["sources"]:
                 for s in res["sources"]:
                     st.markdown(f"- **{s['title']}** (Section: *{s['section']}*, Page {s['page']}) — *Relevance Score: {s['relevance_score']}*")
             else:
                 st.info("No direct paper sources linked.")
 
-            with st.expander("🔎 Inspect Extracted Evidence Passages", expanded=False):
+            with st.expander(" Inspect Extracted Evidence Passages", expanded=False):
                 for i, c in enumerate(res["evidence_chunks"], 1):
                     st.markdown(f"**[Evidence {i}] {c.get('title')}** | Section: *{c.get('section')}* | Page: {c.get('page')}")
                     st.code(c.get("text", ""), language="text")
