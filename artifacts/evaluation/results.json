@@ -1,0 +1,38 @@
+{
+  "BM25 (Sparse Lexical)": {
+    "mode": "bm25",
+    "Precision@5": 0.4667,
+    "Recall@5": 0.7333,
+    "MRR": 0.5733,
+    "nDCG@5": 0.6007,
+    "avg_latency_ms": 2.45,
+    "queries_evaluated": 30
+  },
+  "Dense (BGE-small)": {
+    "mode": "dense",
+    "Precision@5": 0.6467,
+    "Recall@5": 0.8,
+    "MRR": 0.725,
+    "nDCG@5": 0.7386,
+    "avg_latency_ms": 227.87,
+    "queries_evaluated": 30
+  },
+  "Hybrid Weighted (alpha=0.7)": {
+    "mode": "hybrid_weighted",
+    "Precision@5": 0.6533,
+    "Recall@5": 0.7667,
+    "MRR": 0.7333,
+    "nDCG@5": 0.7341,
+    "avg_latency_ms": 239.84,
+    "queries_evaluated": 30
+  },
+  "Hybrid RRF (k=60)": {
+    "mode": "hybrid_rrf",
+    "Precision@5": 0.5933,
+    "Recall@5": 0.8,
+    "MRR": 0.6944,
+    "nDCG@5": 0.7132,
+    "avg_latency_ms": 230.92,
+    "queries_evaluated": 30
+  }
+}

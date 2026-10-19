@@ -55,6 +55,13 @@ class Embedder:
             batch = texts[i : i + self.batch_size]
             emb_batch = self.model.embed_documents(batch)
             all_embeddings.extend(emb_batch)
+            if len(all_embeddings) % 128 == 0 or len(all_embeddings) == len(texts):
+                logger.info(
+                    "Embedded %d / %d chunks (%.1f%%)...",
+                    len(all_embeddings),
+                    len(texts),
+                    (len(all_embeddings) / len(texts)) * 100,
+                )
 
         logger.info("Successfully generated %d embeddings", len(all_embeddings))
         return all_embeddings

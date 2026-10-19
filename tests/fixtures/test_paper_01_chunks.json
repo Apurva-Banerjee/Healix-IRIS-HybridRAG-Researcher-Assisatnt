@@ -1,0 +1,66 @@
+[
+  {
+    "chunk_id": "test_paper_01__abstract__c0",
+    "paper_id": "test_paper_01",
+    "title": "Test Paper on GraphRAG",
+    "section": "Abstract",
+    "page_number": 1,
+    "chunk_index": 0,
+    "text": "GraphRAG creates hierarchical graph structures to assist question answering over complex corporate corpora.",
+    "source": "arxiv",
+    "token_count": 17,
+    "metadata": {
+      "section": "Abstract",
+      "page": 1,
+      "paper_id": "test_paper_01"
+    }
+  },
+  {
+    "chunk_id": "test_paper_01__methodology__c1",
+    "paper_id": "test_paper_01",
+    "title": "Test Paper on GraphRAG",
+    "section": "Methodology",
+    "page_number": 2,
+    "chunk_index": 1,
+    "text": "First, the system extracts entities and relationships from text chunks.\n\nFirst, the system extracts entities and relationships from text chunks.\n\nFirst, the system extracts entities and relationships from text chunks.\n\nFirst, the system extracts entities and relationships from text chunks.\n\nFirst, the system extracts entities and relationships from text chunks.\n\nFirst, the system extracts entities and relationships from text chunks.\n\nFirst, the system extracts entities and relationships from text chunks.",
+    "source": "arxiv",
+    "token_count": 98,
+    "metadata": {
+      "section": "Methodology",
+      "page": 2,
+      "paper_id": "test_paper_01"
+    }
+  },
+  {
+    "chunk_id": "test_paper_01__methodology__c2",
+    "paper_id": "test_paper_01",
+    "title": "Test Paper on GraphRAG",
+    "section": "Methodology",
+    "page_number": 2,
+    "chunk_index": 2,
+    "text": "First, the system extracts entities and relationships from text chunks.\n\nFirst, the system extracts entities and relationships from text chunks.\n\nFirst, the system extracts entities and relationships from text chunks.\n\nFirst, the system extracts entities and relationships from text chunks.",
+    "source": "arxiv",
+    "token_count": 56,
+    "metadata": {
+      "section": "Methodology",
+      "page": 2,
+      "paper_id": "test_paper_01"
+    }
+  },
+  {
+    "chunk_id": "test_paper_01__limitations__c3",
+    "paper_id": "test_paper_01",
+    "title": "Test Paper on GraphRAG",
+    "section": "Limitations",
+    "page_number": 5,
+    "chunk_index": 3,
+    "text": "The primary limitation is the high token cost incurred during extensive graph generation and LLM extraction passes.",
+    "source": "arxiv",
+    "token_count": 23,
+    "metadata": {
+      "section": "Limitations",
+      "page": 5,
+      "paper_id": "test_paper_01"
+    }
+  }
+]

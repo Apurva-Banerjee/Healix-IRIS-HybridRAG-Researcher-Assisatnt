@@ -105,6 +105,14 @@ class QdrantStore:
                 points=batch,
             )
             total_upserted += len(batch)
+            if total_upserted % 128 == 0 or total_upserted == len(points):
+                logger.info(
+                    "Upserted %d / %d points to Qdrant collection '%s' (%.1f%%)...",
+                    total_upserted,
+                    len(points),
+                    self.collection_name,
+                    (total_upserted / len(points)) * 100,
+                )
 
         logger.info("Upserted %d points to Qdrant collection '%s'", total_upserted, self.collection_name)
         return total_upserted

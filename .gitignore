@@ -33,6 +33,8 @@ data/processed/chunks/*
 !data/processed/chunks/.gitkeep
 data/evaluation/*
 !data/evaluation/.gitkeep
+!data/evaluation/*.jsonl
+!data/evaluation/*.json
 
 # Testing & coverage
 .pytest_cache/

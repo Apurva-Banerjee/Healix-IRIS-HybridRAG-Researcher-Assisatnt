@@ -1,153 +1,158 @@
-# 🔬 AI Research Scientist Assistant (MVP)
+# 🔬 AI Research Scientist Assistant (ScholarRAG)
 
-An evidence-grounded scientific research intelligence platform that bridges the gap between research questions and verifiable literature answers. The system systematically searches scientific repositories (arXiv, OpenAlex), normalizes and deduplicates metadata, parses PDFs into academic sections, creates semantic section-aware chunks, indexes vectors into Qdrant, performs hybrid retrieval (Dense Semantic + BM25 Keyword), and generates grounded answers citing specific scientific papers using local LLMs (Ollama).
+An evidence-grounded scientific research intelligence platform that bridges the gap between complex research questions and verifiable literature answers. The system systematically ingests scientific papers from scholarly repositories (arXiv, OpenAlex, Semantic Scholar), validates PDF signatures and SHA-256 checksums, parses documents into academic sections, constructs section-aware retrieval units, performs multi-mode hybrid retrieval (Dense Semantic BGE + Sparse BM25 + Reciprocal Rank Fusion), and generates publication-grade, humanized, plagiarism-free research paper drafts and answers with verified citation grounding.
 
 ---
 
 ## 🏛️ System Architecture
 
 ```text
-                           USER / RESEARCHER
-                                   │
-                    ┌──────────────┴──────────────┐
-                    │                             │
-          REST API (FastAPI)             Interactive UI (Streamlit)
-          POST /search, /ask             Visual Q&A & Corpus Browser
-                    │                             │
-                    └──────────────┬──────────────┘
-                                   │
-                         [ Research Query ]
-                                   │
-                                   ▼
-                     Hybrid Retrieval Coordinator
-                                   │
-              ┌────────────────────┴────────────────────┐
-              ▼                                         ▼
-     Dense Vector Search                      Sparse Keyword Search
-   BAAI/bge-small-en-v1.5 / BGE-M3                  BM25Okapi
-         Qdrant Vector DB                        Term Matching
-              │                                         │
-              └────────────────────┬────────────────────┘
-                                   ▼
-                     Score Fusion & Deduplication
-                     (Linear α=0.7 or RRF Rank Fusion)
-                                   │
-                                   ▼
-                    Top-K Ranked Scientific Evidence
-                    [Paper, Canonical Section, Page, Score]
-                                   │
-                                   ▼
-                       Research Prompt Builder
-                     (Strict Evidence Attribution)
-                                   │
-                                   ▼
-                        Local LLM Inference
-                         Ollama (Llama-3 / Gemma-3)
-                                   │
-                                   ▼
-                    Evidence-Grounded Research Answer
-                       + Supporting Paper Citations
+                                USER / RESEARCHER
+                                        │
+                         ┌──────────────┴──────────────┐
+                         │                             │
+               REST API (FastAPI)             Interactive UI (Streamlit)
+           POST /search, /ask, /paper/draft    5-Tab Visual Research Workstation
+                         │                             │
+                         └──────────────┬──────────────┘
+                                        │
+                              [ Research Question ]
+                                        │
+                                        ▼
+                      Multi-Mode Hybrid Retrieval Coordinator
+                                        │
+                   ┌────────────────────┴────────────────────┐
+                   ▼                                         ▼
+          Dense Vector Lane                         Sparse Lexical Lane
+        BAAI/bge-small-en-v1.5                           BM25Okapi
+         Qdrant Vector Store                       Inverted Token Corpus
+          (384 dimensions)                           (Sub-3ms Latency)
+                   │                                         │
+                   └────────────────────┬────────────────────┘
+                                        │
+                         ┌──────────────┴──────────────┐
+                         ▼                             ▼
+                 Reciprocal Rank                 Min-Max Scaled
+                  Fusion (RRF)                   Linear Fusion
+                     (k=60)                       (alpha=0.7)
+                         │                             │
+                         └──────────────┬──────────────┘
+                                        │
+                                        ▼
+                      Top-K Ranked Scientific Evidence
+                    [Paper, Canonical Section, Page, Lane]
+                                        │
+                         ┌──────────────┴──────────────┐
+                         ▼                             ▼
+               Grounded Q&A Engine           Academic Paper Generator
+              (Attributed Synthesis)        (Humanized & Plagiarism-Free)
+                         │                             │
+                         ▼                             ▼
+                Citation Verification         Publication Draft (.md)
+             (Support Rate, Conflicts)     (Abstract, Review, Gaps, Roadmap)
 ```
 
 ---
 
-## 📥 Offline Ingestion & Indexing Pipeline
+## 📥 Offline Ingestion & Corpus Integrity
 
 ```text
   arXiv Atom API ────────┐
                          ├─► Normalizer ─► Deduplicator ─► SQLite DB (metadata.db)
-  OpenAlex REST API ─────┘      │                 │
-                                ▼                 ▼
-                         Title/DOI/arXiv    DOI > arXiv >
-                          Fingerprinting     Title+Year+Author
+  OpenAlex REST API ─────┘      │                 │            │
+                                ▼                 ▼            ▼
+                         Fingerprinting     DOI > arXiv >    SHA-256 Checksums
+                                          Title+Year+Author  & Source Logs
                                                   │
                                                   ▼
-                                            PDF Downloader (data/raw/pdf/)
+                                            PDF Downloader (%PDF- validation)
                                                   │
                                                   ▼
-                                            PyMuPDF Parser (data/processed/text/)
+                                            PyMuPDF Parser (Section Extraction)
                                                   │
                                                   ▼
-                                            Section Extractor (Abstract, Methods, ...)
+                                            Section-Aware Chunker (600/100 tokens)
                                                   │
                                                   ▼
-                                            SectionAwareChunker (data/processed/chunks/)
-                                                  │
-                                                  ▼
-                                            Embedder (SentenceTransformers / BGE)
-                                                  │
-                                                  ▼
-                                            Qdrant Vector DB (Cosine Similarity)
+                                            Qdrant Vector DB (929 points)
+                                            + BM25 Inverted Corpus (929 chunks)
 ```
+
+---
+
+## 📊 Controlled Retrieval Benchmark Results
+
+Evaluated over **30 domain-specific scientific research queries** across 6 research categories on the reconciled corpus (59 papers, 929 section-aware chunks):
+
+| Retrieval Method | Mode Code | Precision@5 | Recall@5 | MRR | nDCG@5 | Mean Latency |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **BM25 (Sparse Lexical)** | `bm25` | 0.4667 | 0.7333 | 0.5733 | 0.6007 | **2.45 ms** |
+| **Dense (BGE-small-en-v1.5)** | `dense` | 0.6467 | **0.8000** | 0.7250 | **0.7386** | 227.87 ms |
+| **Hybrid Weighted ($\alpha=0.7$)** | `hybrid_weighted` | **0.6533** | 0.7667 | **0.7333** | 0.7341 | 239.84 ms |
+| **Hybrid RRF ($k=60$)** | `hybrid_rrf` | 0.5933 | **0.8000** | 0.6944 | 0.7132 | 230.92 ms |
+
+Artifacts saved to:
+- `artifacts/evaluation/results.csv`
+- `artifacts/evaluation/results.json`
+- `artifacts/evaluation/error_analysis.md`
+- `data/evaluation/queries.jsonl`
+- `data/evaluation/qrels.jsonl`
 
 ---
 
 ## 📁 Repository Structure
 
 ```text
+├── artifacts/
+│   ├── evaluation/              # Benchmark results (CSV, JSON, Error Analysis)
+│   └── research_paper_draft.md  # Generated publication-ready paper draft
 ├── data/
 │   ├── raw/
 │   │   ├── metadata/            # Raw JSON feeds from scientific APIs
-│   │   └── pdf/                 # Downloaded open-access academic PDFs
+│   │   └── pdf/                 # Downloaded academic PDFs (verified SHA-256)
 │   ├── processed/
 │   │   ├── text/                # Clean, dehyphenated plain text per paper
 │   │   ├── json/                # Structured documents with extracted sections
-│   │   └── chunks/              # Section-aware retrieval units
-│   └── evaluation/              # Benchmark ground-truth datasets
+│   │   └── chunks/              # 929 section-aware retrieval units
+│   └── evaluation/              # Benchmark queries & ground truth qrels
+├── docs/
+│   ├── PROJECT_AUDIT.md         # Full repository audit & component map
+│   ├── DATA_INTEGRITY.md        # Corpus reconciliation report
+│   ├── PDF_PARSING_AUDIT.md     # PDF parsing & chunk quality audit
+│   ├── RETRIEVAL_DESIGN.md      # Retrieval modes, RRF equations, schemas
+│   ├── EVALUATION_PROTOCOL.md   # Evaluation metrics & query taxonomy
+│   ├── EXPERIMENT_RESULTS.md    # Multi-mode benchmark analysis
+│   ├── GENERATION_AND_CITATIONS.md # Grounded generation & citation verification
+│   ├── KNOWN_ISSUES.md          # Known boundaries & engineering limits
+│   └── REPRODUCIBILITY.md       # Setup & replication guide
 ├── storage/
-│   ├── qdrant/                  # Local embedded Qdrant vector database
-│   └── metadata.db              # SQLite relational paper metadata & ingestion logs
+│   ├── qdrant/                  # Local embedded Qdrant vector store
+│   └── metadata.db              # SQLite database (59 cataloged papers)
 ├── src/
-│   ├── config/
-│   │   └── settings.py          # Pydantic v2 application configuration & paths
-│   ├── ingestion/
-│   │   ├── arxiv_client.py      # arXiv Atom API client with rate limiting
-│   │   ├── openalex_client.py   # OpenAlex REST client with abstract reconstruction
-│   │   ├── semantic_scholar_client.py # Optional Semantic Scholar enrichment
-│   │   ├── normalizer.py        # Text, title, DOI, and arXiv ID canonicalization
-│   │   ├── deduplicator.py      # DOI > arXiv > Title/Year/Author priority deduplication
-│   │   └── ingestion_pipeline.py # End-to-end ingestion pipeline
-│   ├── database/
-│   │   ├── models.py            # Pydantic PaperRecord and IngestionLog models
-│   │   ├── connection.py        # SQLite WAL-mode connection manager
-│   │   └── repository.py        # Relational CRUD operations and logging
-│   ├── pdf_processing/
-│   │   ├── downloader.py        # Streaming downloader with PDF signature validation
-│   │   ├── cleaner.py           # Dehyphenation and header/footer noise removal
-│   │   ├── section_extractor.py # Academic heading detection (Abstract, Methods, etc.)
-│   │   └── parser.py            # PyMuPDF document parser
-│   ├── chunking/
-│   │   ├── chunk_schema.py      # ChunkRecord schema with section metadata
-│   │   └── chunker.py           # Paragraph/sentence sliding window chunker
-│   ├── embeddings/
-│   │   ├── model.py             # SentenceTransformers BGE model & FastDense fallback
-│   │   └── embedder.py          # Batch embedding generation service
-│   ├── retrieval/
-│   │   ├── qdrant_store.py      # Qdrant client (embedded disk or remote server)
-│   │   ├── semantic_search.py   # Dense vector similarity retriever
-│   │   ├── keyword_search.py    # BM25Okapi keyword retriever
-│   │   └── hybrid_search.py     # Linear score fusion and Reciprocal Rank Fusion (RRF)
-│   ├── generation/
-│   │   ├── ollama_client.py     # Local Ollama LLM client with auto-model resolution
-│   │   ├── prompt_builder.py    # Scientific prompt construction with citation rules
-│   │   └── answer_generator.py  # Grounded synthesis and provenance extraction
-│   ├── evaluation/
-│   │   ├── retrieval_metrics.py # Precision@K, Recall@K, MRR, nDCG@K
-│   │   └── evaluation_dataset.py# Benchmark research query dataset
-│   └── api/
-│       └── main.py              # FastAPI REST endpoints
+│   ├── api/                     # FastAPI endpoints (/search, /ask, /paper/draft, /audit)
+│   ├── chunking/                # SectionAwareChunker (600/100 tokens)
+│   ├── config/                  # Settings and path configuration
+│   ├── database/                # SQLite connection manager, models, repository
+│   ├── embeddings/              # BAAI/bge-small-en-v1.5 & FastDense fallback
+│   ├── evaluation/              # Precision, Recall, MRR, nDCG, 30-query dataset
+│   ├── generation/              # AnswerGenerator, CitationVerifier, PaperGenerator
+│   ├── ingestion/               # arXiv, OpenAlex, Semantic Scholar adapters
+│   ├── pdf_processing/          # PyMuPDF parser, cleaner, section extractor
+│   └── retrieval/               # HybridSearchEngine (dense, bm25, rrf, weighted)
 ├── ui/
-│   └── app.py                   # Interactive Streamlit research assistant UI
+│   └── app.py                   # Streamlit 5-tab research assistant workstation
 ├── scripts/
-│   ├── ingest.py                # CLI: Ingest papers for a topic
-│   ├── process_pdfs.py          # CLI: Parse and clean downloaded PDFs
-│   ├── create_chunks.py         # CLI: Generate section-aware chunks
-│   ├── generate_embeddings.py   # CLI: Compute embeddings and index into Qdrant
-│   ├── run_pipeline.py          # CLI: Run complete end-to-end vertical slice
-│   └── evaluate.py              # CLI: Run retrieval quality benchmark
-├── tests/                       # Complete pytest unit and integration test suite
+│   ├── audit_corpus.py          # Read-only audit & safe repair tool
+│   ├── build_index.py           # Index chunks into Qdrant & BM25
+│   ├── create_chunks.py         # Generate section-aware chunks
+│   ├── evaluate.py              # Run multi-mode retrieval benchmark
+│   ├── ingest.py                # CLI paper ingestion
+│   ├── process_pdfs.py          # CLI PDF parsing
+│   └── run_pipeline.py          # Complete pipeline runner
+├── tests/                       # Complete pytest unit & regression test suite
 ├── requirements.txt
 ├── .env.example
+├── pytest.ini
 └── README.md
 ```
 
@@ -155,77 +160,51 @@ An evidence-grounded scientific research intelligence platform that bridges the 
 
 ## 🚀 Quick Start Guide
 
-### 1. Environment Setup
+### 1. Installation
 ```bash
-# Clone the repository and navigate into project directory
-cd "Project Final Year (AI Research Copilot)"
+git clone https://github.com/Apurva-Banerjee/Healix-IRIS-HybridRAG-Researcher-Assisatnt.git
+cd Healix-IRIS-HybridRAG-Researcher-Assisatnt
 
-# Initialize virtual environment
 python -m venv .venv
+# On Windows:
+.venv\Scripts\activate
+# On Linux/macOS:
+source .venv/bin/activate
 
-# Activate virtual environment (Windows PowerShell)
-.\.venv\Scripts\Activate.ps1
-
-# Install dependencies
 pip install -r requirements.txt
+cp .env.example .env
 ```
 
-### 2. Configure Environment (`.env`)
-Copy `.env.example` to `.env`. Defaults work out-of-the-box:
-```env
-OPENALEX_EMAIL=researcher@example.com
-EMBEDDING_MODEL_NAME=BAAI/bge-small-en-v1.5
-EMBEDDING_DEVICE=cpu
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3:latest
-QDRANT_COLLECTION=research_chunks
-```
-*Note: If `QDRANT_URL` is left empty, the system automatically uses embedded on-disk storage at `./storage/qdrant` with zero Docker dependencies.*
-
-### 3. Run the End-to-End Vertical Slice
-Execute the complete pipeline (Discovery ➔ Parsing ➔ Chunking ➔ Indexing ➔ Querying):
+### 2. Verify Corpus & Run Tests
 ```bash
-python scripts/run_pipeline.py --query "GraphRAG" --target 10 --max-pdfs 3
+# Verify 100% parity across DB, PDFs, chunks, and Qdrant
+python scripts/audit_corpus.py
+
+# Run test suite
+python -m pytest
 ```
 
-### 4. Launch the Interactive Web UI (Streamlit)
+### 3. Launch Applications
 ```bash
+# Streamlit Interactive Research Assistant
 streamlit run ui/app.py
-```
-Open your browser at `http://localhost:8501` to search evidence, browse cataloged papers, and synthesize answers with citations.
 
-### 5. Launch the REST API (FastAPI)
-```bash
-uvicorn src.api.main:app --host 127.0.0.1 --port 8000 --reload
+# FastAPI REST API Server
+uvicorn src.api.main:app --host 127.0.0.1 --port 8000
 ```
-Interactive Swagger API documentation is available at `http://localhost:8000/docs`.
+API Documentation will be available at `http://127.0.0.1:8000/docs`.
 
 ---
 
-## 📡 REST API Reference
+## 📜 Citation & License
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `GET /health` | `GET` | Health check, vector count, paper count, and Ollama status |
-| `POST /search` | `POST` | Retrieve top-K evidence chunks (methods: `hybrid`, `semantic`, `keyword`) |
-| `POST /ask` | `POST` | Evidence-grounded synthesis using retrieved passages |
-| `POST /ingest` | `POST` | Trigger discovery from arXiv/OpenAlex and download PDFs |
-| `GET /papers` | `GET` | Browse cataloged papers with metadata and PDF status |
-
----
-
-## 🧪 Running Tests & Evaluation
-
-### Run Test Suite
-```bash
-pytest -v tests
+This project is licensed under the Apache 2.0 License.
+If utilizing this framework for academic research, please cite:
+```bibtex
+@software{scholar_rag_2026,
+  author = {Apurva Banerjee},
+  title = {ScholarRAG: Section-Aware Hybrid Retrieval-Augmented Generation for Scientific Literature Synthesis},
+  year = {2026},
+  url = {https://github.com/Apurva-Banerjee/Healix-IRIS-HybridRAG-Researcher-Assisatnt}
+}
 ```
-*All 18 unit and integration tests validate ingestion normalization, deduplication, PDF cleaning, section extraction, sliding-window chunking, dense vector indexing, BM25 retrieval, and API endpoints.*
-
-### Run Retrieval Benchmark Evaluation
-```bash
-python scripts/evaluate.py --k 3
-```
-Measures ranking and retrieval quality across `Precision@K`, `Recall@K`, `MRR` (Mean Reciprocal Rank), and `nDCG@K`.
-
-<!--  .\.venv\Scripts\streamlit.exe run ui/app.py -->

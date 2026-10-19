@@ -6,19 +6,22 @@ from src.config.settings import settings
 from src.database.models import PaperRecord
 from src.database.repository import PaperRepository
 from src.generation.answer_generator import ResearchAnswerGenerator
+from src.generation.citation_verifier import CitationVerifier
 from src.generation.ollama_client import OllamaClient
+from src.generation.paper_generator import AcademicPaperGenerator
 from src.ingestion.ingestion_pipeline import IngestionPipeline
 from src.retrieval.hybrid_search import HybridSearchEngine
 from src.retrieval.keyword_search import BM25SearchEngine
 from src.retrieval.qdrant_store import QdrantStore
 from src.retrieval.semantic_search import SemanticSearchEngine
+from scripts.audit_corpus import CorpusAuditor
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("api")
 
 app = FastAPI(
-    title="AI Research Scientist Assistant API",
-    description="Evidence-grounded scientific research intelligence and RAG API",
+    title="AI Research Scientist Assistant (ScholarRAG) API",
+    description="Evidence-grounded scientific research intelligence, hybrid retrieval, and paper synthesis API",
     version=settings.VERSION,
 )
 
@@ -29,15 +32,24 @@ semantic_search = SemanticSearchEngine(qdrant_store=qdrant_store)
 bm25_search = BM25SearchEngine()
 hybrid_search = HybridSearchEngine(semantic_search=semantic_search, keyword_search=bm25_search)
 ollama_client = OllamaClient()
-answer_generator = ResearchAnswerGenerator(ollama_client=ollama_client)
+citation_verifier = CitationVerifier()
+answer_generator = ResearchAnswerGenerator(
+    ollama_client=ollama_client,
+    citation_verifier=citation_verifier,
+)
+paper_generator = AcademicPaperGenerator(
+    retriever=hybrid_search,
+    citation_verifier=citation_verifier,
+)
 ingestion_pipeline = IngestionPipeline(repository=repository)
+corpus_auditor = CorpusAuditor()
 
 
 # Request & Response Schemas
 class SearchRequest(BaseModel):
     query: str = Field(..., json_schema_extra={"example": "limitations of GraphRAG"})
     top_k: int = Field(default=5, ge=1, le=50)
-    method: str = Field(default="hybrid", pattern="^(semantic|keyword|hybrid)$")
+    method: str = Field(default="hybrid_rrf", description="Retrieval mode: hybrid_rrf, hybrid_weighted, dense, bm25")
     filter_section: Optional[str] = None
 
 
@@ -51,7 +63,7 @@ class SearchResponse(BaseModel):
 class AskRequest(BaseModel):
     query: str = Field(..., json_schema_extra={"example": "What are the key limitations of GraphRAG?"})
     top_k: int = Field(default=5, ge=1, le=20)
-    method: str = Field(default="hybrid", pattern="^(semantic|keyword|hybrid)$")
+    method: str = Field(default="hybrid_rrf", description="Retrieval mode: hybrid_rrf, hybrid_weighted, dense, bm25")
 
 
 class AskResponse(BaseModel):
@@ -62,6 +74,22 @@ class AskResponse(BaseModel):
     evidence_chunks: List[Dict[str, Any]]
     generation_time_sec: float
     is_ollama_live: bool
+    verification_report: Optional[Dict[str, Any]] = None
+    conflicting_evidence: Optional[List[Dict[str, Any]]] = None
+
+
+class PaperDraftRequest(BaseModel):
+    topic: str = Field(default="Comparative Evaluation of GraphRAG and Hybrid RAG in Scientific Literature Synthesis")
+
+
+class PaperDraftResponse(BaseModel):
+    topic: str
+    document_path: str
+    word_count: int
+    evidence_chunks_consulted: int
+    cited_papers_count: int
+    elapsed_seconds: float
+    document_content: str
 
 
 class IngestRequest(BaseModel):
@@ -75,6 +103,7 @@ class IngestRequest(BaseModel):
 def root():
     return {
         "name": settings.PROJECT_NAME,
+        "framework": "ScholarRAG",
         "version": settings.VERSION,
         "status": "online",
         "docs": "/docs",
@@ -97,15 +126,21 @@ def health_check():
     }
 
 
+@app.get("/audit")
+def audit_corpus():
+    """Return comprehensive integrity metrics across database, PDFs, chunks, and Qdrant."""
+    return corpus_auditor.audit()
+
+
 @app.post("/search", response_model=SearchResponse)
 def search_evidence(req: SearchRequest):
     """Retrieve top-K scientific evidence passages matching the query."""
-    if req.method == "semantic":
-        results = semantic_search.search(req.query, top_k=req.top_k, filter_section=req.filter_section)
-    elif req.method == "keyword":
-        results = bm25_search.search(req.query, top_k=req.top_k)
-    else:
-        results = hybrid_search.search(req.query, top_k=req.top_k, filter_section=req.filter_section)
+    results = hybrid_search.search(
+        query=req.query,
+        top_k=req.top_k,
+        filter_section=req.filter_section,
+        method=req.method,
+    )
 
     return SearchResponse(
         query=req.query,
@@ -118,15 +153,25 @@ def search_evidence(req: SearchRequest):
 @app.post("/ask", response_model=AskResponse)
 def ask_question(req: AskRequest):
     """Grounded RAG synthesis: retrieves relevant evidence and generates an attributed answer."""
-    if req.method == "semantic":
-        retrieved_chunks = semantic_search.search(req.query, top_k=req.top_k)
-    elif req.method == "keyword":
-        retrieved_chunks = bm25_search.search(req.query, top_k=req.top_k)
-    else:
-        retrieved_chunks = hybrid_search.search(req.query, top_k=req.top_k)
+    retrieved_chunks = hybrid_search.search(
+        query=req.query,
+        top_k=req.top_k,
+        method=req.method,
+    )
 
     result = answer_generator.generate_answer(query=req.query, retrieved_chunks=retrieved_chunks)
     return AskResponse(**result)
+
+
+@app.post("/paper/draft", response_model=PaperDraftResponse)
+def generate_paper_draft(req: PaperDraftRequest):
+    """Generate a publication-grade, humanized, plagiarism-free research paper draft."""
+    try:
+        res = paper_generator.generate_full_paper_draft(topic=req.topic)
+        return PaperDraftResponse(**res)
+    except Exception as e:
+        logger.error("Paper drafting failed: %s", str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Paper draft generation failed: {str(e)}")
 
 
 @app.post("/ingest")
