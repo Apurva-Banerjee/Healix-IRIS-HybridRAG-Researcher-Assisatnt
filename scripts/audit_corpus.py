@@ -336,8 +336,8 @@ class CorpusAuditor:
         report["processed_text_count"] = len(text_files)
         report["processed_json_count"] = len(json_files)
 
-        # 4. Audit Chunk Files and Chunk Units
-        chunk_files = list(self.chunks_dir.glob("*.json"))
+        # 4. Audit Chunk Files and Chunk Units (excluding test fixtures)
+        chunk_files = [f for f in self.chunks_dir.glob("*.json") if not f.name.startswith("test_")]
         report["chunk_files_count"] = len(chunk_files)
         total_chunks = 0
         for cf in chunk_files:

@@ -1,8 +1,12 @@
+import hashlib
 import json
+import logging
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Set, Tuple
 
-# Benchmark evaluation questions for scientific RAG evaluation (ScholarRAG)
+logger = logging.getLogger(__name__)
+
+# Canonical benchmark query dataset (30 scientific research queries across 6 categories)
 DEFAULT_EVALUATION_DATASET: List[Dict[str, Any]] = [
     # Category 1: Conceptual Foundations
     {
@@ -228,11 +232,27 @@ DEFAULT_EVALUATION_DATASET: List[Dict[str, Any]] = [
 ]
 
 
-def export_evaluation_dataset(output_dir: Path) -> None:
-    """Export benchmark queries.jsonl and qrels.jsonl for reproducibility."""
+def file_sha256(path: Path) -> str:
+    """Compute SHA-256 hash of a file."""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        while chunk := f.read(65536):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def export_evaluation_dataset(output_dir: Path, overwrite: bool = False) -> Tuple[Path, Path]:
+    """
+    Export benchmark queries.jsonl and qrels.jsonl for reproducibility.
+    Does NOT overwrite existing files unless overwrite=True is explicitly passed.
+    """
     output_dir.mkdir(parents=True, exist_ok=True)
     queries_file = output_dir / "queries.jsonl"
     qrels_file = output_dir / "qrels.jsonl"
+
+    if queries_file.exists() and qrels_file.exists() and not overwrite:
+        logger.info("Evaluation files already exist at %s. Skipping export (immutable mode).", output_dir)
+        return queries_file, qrels_file
 
     with open(queries_file, "w", encoding="utf-8") as f_q, open(qrels_file, "w", encoding="utf-8") as f_r:
         for item in DEFAULT_EVALUATION_DATASET:
@@ -250,15 +270,74 @@ def export_evaluation_dataset(output_dir: Path) -> None:
                     "relevance": 3,
                 }) + "\n")
 
+    logger.info("Exported %d benchmark queries to %s", len(DEFAULT_EVALUATION_DATASET), output_dir)
+    return queries_file, qrels_file
 
-def load_evaluation_dataset(evaluation_dir: Path) -> List[Dict[str, Any]]:
-    """Load benchmark dataset, falling back to embedded list."""
-    queries_file = evaluation_dir / "queries.jsonl"
-    if queries_file.exists():
-        loaded = []
-        with open(queries_file, "r", encoding="utf-8") as f:
-            for line in f:
-                if line.strip():
-                    loaded.append(json.loads(line))
-        return loaded
-    return DEFAULT_EVALUATION_DATASET
+
+def load_authoritative_dataset(queries_path: Path, qrels_path: Path) -> List[Dict[str, Any]]:
+    """
+    Load authoritative benchmark queries and qrels from disk.
+    Strictly read-only; maps qrels paper IDs into each corresponding query object.
+    """
+    if not queries_path.exists():
+        raise FileNotFoundError(f"Queries file not found at {queries_path}")
+    if not qrels_path.exists():
+        raise FileNotFoundError(f"Qrels file not found at {qrels_path}")
+
+    # 1. Load queries
+    queries_by_id: Dict[str, Dict[str, Any]] = {}
+    with open(queries_path, "r", encoding="utf-8") as f:
+        for line in f:
+            if line.strip():
+                item = json.loads(line)
+                qid = item["query_id"]
+                item["relevant_paper_ids"] = []
+                item["relevance_grades"] = {}
+                queries_by_id[qid] = item
+
+    # 2. Load qrels and map to queries
+    with open(qrels_path, "r", encoding="utf-8") as f:
+        for line in f:
+            if line.strip():
+                qrel = json.loads(line)
+                qid = qrel["query_id"]
+                pid = qrel["paper_id"]
+                rel = qrel.get("relevance", 1)
+
+                if qid in queries_by_id:
+                    queries_by_id[qid]["relevant_paper_ids"].append(pid)
+                    queries_by_id[qid]["relevance_grades"][pid] = rel
+                else:
+                    logger.warning("Qrel record references unknown query_id '%s'", qid)
+
+    dataset = list(queries_by_id.values())
+    logger.info("Loaded %d authoritative queries from %s (with qrels from %s)", len(dataset), queries_path, qrels_path)
+    return dataset
+
+
+def validate_benchmark_inputs(queries_path: Path, qrels_path: Path) -> Dict[str, Any]:
+    """Validate consistency, counts, and SHA-256 hashes of queries and qrels files."""
+    if not queries_path.exists():
+        return {"valid": False, "error": f"Missing {queries_path}"}
+    if not qrels_path.exists():
+        return {"valid": False, "error": f"Missing {qrels_path}"}
+
+    queries_hash = file_sha256(queries_path)
+    qrels_hash = file_sha256(qrels_path)
+
+    dataset = load_authoritative_dataset(queries_path, qrels_path)
+    unjudged_queries = [q["query_id"] for q in dataset if not q["relevant_paper_ids"]]
+
+    total_qrels = sum(len(q["relevant_paper_ids"]) for q in dataset)
+
+    return {
+        "valid": True,
+        "queries_count": len(dataset),
+        "total_judgments_count": total_qrels,
+        "unjudged_queries_count": len(unjudged_queries),
+        "unjudged_query_ids": unjudged_queries,
+        "queries_file": str(queries_path),
+        "queries_sha256": queries_hash,
+        "qrels_file": str(qrels_path),
+        "qrels_sha256": qrels_hash,
+    }

@@ -1,6 +1,7 @@
 import logging
 from typing import Any, Dict, List, Optional
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from src.config.settings import settings
 from src.database.models import PaperRecord
@@ -24,6 +25,26 @@ app = FastAPI(
     description="Evidence-grounded scientific research intelligence, hybrid retrieval, and paper synthesis API",
     version=settings.VERSION,
 )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Sanitized HTTP exception response handler."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": {"code": f"HTTP_{exc.status_code}", "message": exc.detail}},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Global exception handler avoiding raw stack trace leaks to API clients."""
+    logger.error("Unhandled API error processing %s: %s", request.url.path, exc, exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"error": {"code": "INTERNAL_SERVER_ERROR", "message": "An internal server error occurred while processing the request."}},
+    )
+
 
 # Service Singletons
 repository = PaperRepository()

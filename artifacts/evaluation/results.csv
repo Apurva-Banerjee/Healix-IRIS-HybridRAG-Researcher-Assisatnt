@@ -1,5 +1,5 @@
 Method,Mode,Precision@5,Recall@5,MRR,nDCG@5,Latency_ms
-BM25 (Sparse Lexical),bm25,0.4667,0.7333,0.5733,0.6007,2.45
-Dense (BGE-small),dense,0.6467,0.8,0.725,0.7386,227.87
-Hybrid Weighted (alpha=0.7),hybrid_weighted,0.6533,0.7667,0.7333,0.7341,239.84
-Hybrid RRF (k=60),hybrid_rrf,0.5933,0.8,0.6944,0.7132,230.92
+BM25 (Sparse Lexical),bm25,0.02,0.0667,0.0444,0.0441,4.48
+Dense (BGE-small),dense,0.0533,0.1444,0.1778,0.1432,283.35
+Hybrid Weighted (alpha=0.7),hybrid_weighted,0.0467,0.1333,0.1667,0.1354,297.92
+Hybrid RRF (k=60),hybrid_rrf,0.04,0.1222,0.1056,0.1048,288.93

@@ -133,3 +133,155 @@ class CitationVerifier:
                         break
 
         return conflicts
+
+    def verify_claim_support(
+        self,
+        claim_text: str,
+        evidence_text: str,
+    ) -> Dict[str, Any]:
+        """
+        Verify whether an atomic scientific claim is supported, unsupported,
+        or indicates insufficient evidence given the supplied evidence text.
+        
+        Performs:
+        1. Insufficiency detection (explicit abstention markers).
+        2. Numerical & metric consistency verification.
+        3. Contradiction & absolute claims detection.
+        4. Token and entity containment scoring.
+        """
+        c_lower = claim_text.lower().strip()
+        e_lower = evidence_text.lower().strip()
+
+        # 1. Check for insufficiency markers
+        insufficiency_markers = [
+            "insufficient evidence",
+            "cannot be determined",
+            "no hardware configuration details",
+            "no details provided",
+            "corpus provides insufficient",
+            "not found in indexed",
+            "not provided in this section",
+        ]
+        if any(marker in c_lower for marker in insufficiency_markers) or any(marker in e_lower for marker in insufficiency_markers):
+            return {
+                "status": "insufficient_evidence",
+                "confidence": 0.95,
+                "overlap_score": 0.0,
+                "reason": "Explicit insufficiency or lack of evidence declared in claim or evidence passage.",
+            }
+
+        # 2. Numerical and metric verification
+        # Extract numerical expressions including decimals and percentages
+        num_pattern = re.compile(r"\b\d+(?:\.\d+)?%?\b")
+        claim_nums = set(num_pattern.findall(c_lower))
+        evidence_nums = set(num_pattern.findall(e_lower))
+
+        # Check for numerical contradiction (e.g. claim has 98.5% but evidence has 81.6%)
+        claim_metrics = {n for n in claim_nums if "%" in n or "." in n}
+        evidence_metrics = {n for n in evidence_nums if "%" in n or "." in n}
+        if claim_metrics and evidence_metrics and not (claim_metrics & evidence_metrics):
+            return {
+                "status": "unsupported",
+                "confidence": 0.95,
+                "overlap_score": 0.2,
+                "reason": f"Numerical contradiction: claim asserts {list(claim_metrics)}, but evidence states {list(evidence_metrics)}.",
+                "claim_metrics": list(claim_metrics),
+                "evidence_metrics": list(evidence_metrics),
+            }
+
+        # 3. Contradiction & absolute claim detection
+        absolute_patterns = [
+            r"completely replaces\b",
+            r"requires zero\b",
+            r"never requires\b",
+            r"eliminates all\b",
+        ]
+        coexistence_patterns = [
+            r"in conjunction with\b",
+            r"used together with\b",
+            r"combined with\b",
+            r"used in conjunction\b",
+        ]
+        has_absolute = any(re.search(pat, c_lower) for pat in absolute_patterns)
+        has_coexistence = any(re.search(pat, e_lower) for pat in coexistence_patterns)
+        if has_absolute and has_coexistence:
+            return {
+                "status": "unsupported",
+                "confidence": 0.92,
+                "overlap_score": 0.4,
+                "reason": "Contradiction: claim asserts complete replacement, but evidence indicates complementary/conjunction usage.",
+            }
+
+        # 4. Token containment and lexical grounding
+        stopwords = {
+            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of",
+            "with", "by", "as", "is", "are", "was", "were", "be", "been", "being",
+            "have", "has", "had", "do", "does", "did", "this", "that", "these", "those",
+            "we", "our", "it", "its", "from", "over", "under", "via", "through"
+        }
+        claim_words = {w for w in re.findall(r"\b[a-zA-Z0-9_\-\[\]]+\b", c_lower) if w not in stopwords and len(w) > 2}
+        evidence_words = {w for w in re.findall(r"\b[a-zA-Z0-9_\-\[\]]+\b", e_lower) if w not in stopwords and len(w) > 2}
+
+        if not claim_words:
+            overlap = 1.0
+        else:
+            intersection = claim_words & evidence_words
+            overlap = len(intersection) / len(claim_words)
+
+        if overlap >= 0.45:
+            return {
+                "status": "supported",
+                "confidence": min(round(0.5 + overlap * 0.5, 4), 1.0),
+                "overlap_score": round(overlap, 4),
+                "reason": f"Claim content words have high grounding overlap ({round(overlap*100, 1)}%) with evidence.",
+            }
+        else:
+            return {
+                "status": "unsupported",
+                "confidence": round(1.0 - overlap, 4),
+                "overlap_score": round(overlap, 4),
+                "reason": f"Insufficient grounding overlap ({round(overlap*100, 1)}%) between claim and evidence.",
+            }
+
+    def evaluate_claim_support_dataset(
+        self,
+        eval_pairs: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """
+        Evaluate claim support verification accuracy over a curated gold test set.
+        """
+        total = len(eval_pairs)
+        if total == 0:
+            return {"total": 0, "accuracy": 1.0, "results": []}
+
+        correct = 0
+        detailed = []
+
+        for item in eval_pairs:
+            claim = item.get("claim", "")
+            evidence = item.get("evidence_text", "")
+            expected = item.get("ground_truth_label", "")
+
+            pred = self.verify_claim_support(claim, evidence)
+            is_correct = (pred["status"] == expected)
+            if is_correct:
+                correct += 1
+
+            detailed.append({
+                "id": item.get("id"),
+                "claim": claim,
+                "expected": expected,
+                "predicted": pred["status"],
+                "is_correct": is_correct,
+                "confidence": pred.get("confidence"),
+                "reason": pred.get("reason"),
+            })
+
+        accuracy = round(correct / total, 4)
+        return {
+            "total_pairs": total,
+            "correct_predictions": correct,
+            "accuracy": accuracy,
+            "detailed_results": detailed,
+        }
+

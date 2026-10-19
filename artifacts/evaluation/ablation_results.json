@@ -1,0 +1,50 @@
+{
+  "cutoff_k": 5,
+  "queries_count": 30,
+  "condition_counts": {
+    "fixed_window_chunks": 1004,
+    "section_aware_chunks": 929
+  },
+  "metrics": {
+    "Fixed-Window + BM25": {
+      "Precision@5": 0.0267,
+      "Recall@5": 0.0722,
+      "MRR": 0.0472,
+      "nDCG@5": 0.0458
+    },
+    "Section-Aware + BM25": {
+      "Precision@5": 0.02,
+      "Recall@5": 0.0667,
+      "MRR": 0.0444,
+      "nDCG@5": 0.0441
+    },
+    "Fixed-Window + Dense": {
+      "Precision@5": 0.0533,
+      "Recall@5": 0.1444,
+      "MRR": 0.1833,
+      "nDCG@5": 0.1453
+    },
+    "Section-Aware + Dense": {
+      "Precision@5": 0.0533,
+      "Recall@5": 0.1444,
+      "MRR": 0.1778,
+      "nDCG@5": 0.1432
+    },
+    "Fixed-Window + Hybrid RRF": {
+      "Precision@5": 0.0467,
+      "Recall@5": 0.1333,
+      "MRR": 0.1278,
+      "nDCG@5": 0.1173
+    },
+    "Section-Aware + Hybrid RRF": {
+      "Precision@5": 0.04,
+      "Recall@5": 0.1222,
+      "MRR": 0.1056,
+      "nDCG@5": 0.1048
+    }
+  },
+  "paired_deltas": {
+    "mean_ndcg_delta": -0.0125,
+    "mean_mrr_delta": -0.0222
+  }
+}

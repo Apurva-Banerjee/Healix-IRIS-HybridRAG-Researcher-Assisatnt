@@ -1,0 +1,40 @@
+[
+  {
+    "id": "pair_01",
+    "claim": "ColBERT utilizes contextualized late interaction over BERT to perform efficient passage retrieval.",
+    "evidence_text": "ColBERT introduces contextualized late interaction over BERT, significantly improving passage retrieval latency through token-level vector representations.",
+    "ground_truth_label": "supported"
+  },
+  {
+    "id": "pair_02",
+    "claim": "Self-RAG trains reflection tokens [Retrieve], [IsRel], [IsSup], and [IsUse] to control retrieval adaptively.",
+    "evidence_text": "We train an arbitrary LM to generate special reflection tokens [Retrieve], [IsRel], [IsSup], and [IsUse] to dynamically evaluate passage relevance.",
+    "ground_truth_label": "supported"
+  },
+  {
+    "id": "pair_03",
+    "claim": "The hybrid method achieved a ROUGE score of 98.5% on the defect QA benchmark.",
+    "evidence_text": "Our results show that the hybrid LLM-based QA method achieved the highest ROUGE score of 81.6%.",
+    "ground_truth_label": "unsupported",
+    "reason": "Numerical contradiction: claim asserts 98.5%, evidence states 81.6%."
+  },
+  {
+    "id": "pair_04",
+    "claim": "CRAG uses an external retrieval evaluator to assess document confidence before generation.",
+    "evidence_text": "Corrective Retrieval Augmented Generation (CRAG) deploys a lightweight retrieval evaluator to assign confidence scores and trigger web search fallbacks.",
+    "ground_truth_label": "supported"
+  },
+  {
+    "id": "pair_05",
+    "claim": "GraphRAG completely replaces vector embeddings and requires zero dense indexes.",
+    "evidence_text": "GraphRAG constructs knowledge graphs from text chunks, which are typically used in conjunction with dense vector similarity search.",
+    "ground_truth_label": "unsupported",
+    "reason": "Claim of complete replacement is contradicted by evidence."
+  },
+  {
+    "id": "pair_06",
+    "claim": "The indexed corpus provides insufficient evidence to determine the exact hardware specifications.",
+    "evidence_text": "No hardware configuration details provided in this section.",
+    "ground_truth_label": "insufficient_evidence"
+  }
+]

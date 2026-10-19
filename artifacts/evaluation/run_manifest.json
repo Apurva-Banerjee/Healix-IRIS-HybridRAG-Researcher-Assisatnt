@@ -1,0 +1,26 @@
+{
+  "run_id": "eval_run_1792439944",
+  "timestamp": "2026-10-19T19:59:04Z",
+  "git_commit": "77da2c4c7fb07673be705f9176d4131862bbde7c",
+  "evaluation_unit": "paper",
+  "cutoff_k": 5,
+  "benchmark_inputs": {
+    "valid": true,
+    "queries_count": 30,
+    "total_judgments_count": 47,
+    "unjudged_queries_count": 0,
+    "unjudged_query_ids": [],
+    "queries_file": "C:\\Users\\kal_EL\\OneDrive\\\u6587\u6863\\Project Final Year (AI Research Copilot)\\data\\evaluation\\queries.jsonl",
+    "queries_sha256": "c8a9ba9ec1019a486b6d684b0a9b7a5230b878ba1e5b4e809816a4d9bdd2f6b3",
+    "qrels_file": "C:\\Users\\kal_EL\\OneDrive\\\u6587\u6863\\Project Final Year (AI Research Copilot)\\data\\evaluation\\qrels.jsonl",
+    "qrels_sha256": "70de92aaf70e3e1be2a705beaa9cb49a690b7012b028fcc4a3c3b6908b44c51e"
+  },
+  "embedding_model": "BAAI/bge-small-en-v1.5",
+  "embedding_dimension": 384,
+  "vector_collection": "research_chunks",
+  "hybrid_alpha": 0.7,
+  "rrf_k": 60,
+  "total_queries_evaluated": 30,
+  "results_summary_file": "C:\\Users\\kal_EL\\OneDrive\\\u6587\u6863\\Project Final Year (AI Research Copilot)\\artifacts\\evaluation\\results.json",
+  "query_rankings_file": "C:\\Users\\kal_EL\\OneDrive\\\u6587\u6863\\Project Final Year (AI Research Copilot)\\artifacts\\evaluation\\query_level_rankings.jsonl"
+}
